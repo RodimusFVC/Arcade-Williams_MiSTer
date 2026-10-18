@@ -1,0 +1,77 @@
+<misterromdescription>
+    <name>Defender</name>
+    <region>US</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version>Red Label</version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Defender</series>
+    <year>1980</year>
+    <manufacturer>Williams</manufacturer>
+    <category>Shooter</category>
+
+    <setname>defender</setname>
+    <parent>defender</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Williams</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>horizontal</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way vertical</joystick>
+    <special_controls></special_controls>
+    <num_buttons>5</num_buttons>
+    <buttons names="Thrust,Fire,Smart Bomb,Hyperspace,Coin,Start,-,Pause,Reverse,-" default="A,B,X,Y,Select,Start,L,R"/>
+
+    <!-- Index 0: maincpu image by CPU address (banked pages 1-7 at 0000-6FFF, D000-FFFF), sound image 8000-FFFF
+         at 0x10000, proms at 0x18000. Layout in rtl/williams_board.sv -->
+    <rom index="0" md5="none" zip="defender.zip">
+        <part crc="6870e8a5" name="defend.9"/>
+        <part crc="f1f88938" name="defend.12"/>
+        <part crc="b649e306" name="defend.8"/>
+        <part crc="9deaf6d9" name="defend.11"/>
+        <part crc="339e092e" name="defend.7"/>
+        <part crc="a543b167" name="defend.10"/>
+        <part repeat="0x3000">00</part>
+        <part crc="65f4efd1" name="defend.6"/>
+        <part repeat="0x6800">00</part>
+        <part crc="c3e52d7e" name="defend.1"/>
+        <part crc="9a72348b" name="defend.4"/>
+        <part crc="89b75984" name="defend.2"/>
+        <part crc="94f51e9b" name="defend.3"/>
+        <part repeat="0x7800">00</part>
+        <part crc="fefd5b48" name="video_sound_rom_1.ic12"/>
+        <part crc="8dd98da5" name="decoder.2"/>
+        <part crc="c3f45f70" name="decoder.3"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, port idle levels, DIP sources, input map (see Arcade-Williams.sv)
+         Pads are independent; pad 2 Start = Start 2P
+         IN0: Fire (Btn 2), Thrust (Btn 1), Smart Bomb, Hyperspace, Start 2, Start 1, Reverse (Btn 5), Down
+         IN1: Up
+         IN2: Auto Up / Manual Down (key 0), Advance (key 9), Coin 3, High Score Reset (key 8), Coin 1, Coin 2, Tilt -->
+    <rom index="1">
+        <part>
+            00 00 00 00 00 00 00 00 00 00 00 00 80 80 80 80
+            80 80 80 80 06 05 07 08 14 13 20 02 01 00 00 00
+            00 00 00 00 2E 16 00 2F 11 12 15 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 01 02 03 04 05 06 07 00 01 02 03
+            04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
+            04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
+            04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
+            04 05 06 07
+        </part>
+    </rom>
+
+    <!-- Index 4: CMOS RAM (256 x 4, stored as bytes) -->
+    <nvram index="4" size="256"/>
+
+    <remark>Defender (Red Label) (Williams)</remark>
+    <mratimestamp>20261017000000</mratimestamp>
+</misterromdescription>
