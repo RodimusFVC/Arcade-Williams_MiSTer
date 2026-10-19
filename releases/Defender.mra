@@ -27,8 +27,8 @@
     <num_buttons>5</num_buttons>
     <buttons names="Thrust,Fire,Smart Bomb,Hyperspace,Coin,Start,-,Pause,Reverse,-" default="A,B,X,Y,Select,Start,L,R"/>
 
-    <!-- Index 0: maincpu image by CPU address (banked pages 1-7 at 0000-6FFF, D000-FFFF), sound image 8000-FFFF
-         at 0x10000, proms at 0x18000. Layout in rtl/williams_board.sv -->
+    <!-- Index 0: ROM pool image (8 x 4K pages: C000 window pages 1-7, D000-FFFF, sound; map in index 1 bytes 148-173),
+         rtl/williams_board.sv. Part list from tools/make_mra.py layout() -->
     <rom index="0" md5="none" zip="defender.zip">
         <part crc="6870e8a5" name="defend.9"/>
         <part crc="f1f88938" name="defend.12"/>
@@ -36,17 +36,14 @@
         <part crc="9deaf6d9" name="defend.11"/>
         <part crc="339e092e" name="defend.7"/>
         <part crc="a543b167" name="defend.10"/>
-        <part repeat="0x3000">00</part>
         <part crc="65f4efd1" name="defend.6"/>
-        <part repeat="0x6800">00</part>
+        <part repeat="0x800">00</part>
         <part crc="c3e52d7e" name="defend.1"/>
         <part crc="9a72348b" name="defend.4"/>
         <part crc="89b75984" name="defend.2"/>
         <part crc="94f51e9b" name="defend.3"/>
-        <part repeat="0x7800">00</part>
+        <part repeat="0x800">00</part>
         <part crc="fefd5b48" name="video_sound_rom_1.ic12"/>
-        <part crc="8dd98da5" name="decoder.2"/>
-        <part crc="c3f45f70" name="decoder.3"/>
     </rom>
 
     <!-- Index 1: board variant, flags, port idle levels, DIP sources, input map (see Arcade-Williams.sv)
@@ -65,7 +62,9 @@
             04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
             04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
             04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
-            04 05 06 07
+            04 05 06 07 00 01 02 FF FF FF 03 FF FF FF FF FF
+            FF 04 05 06 FF FF FF FF FF FF FF 07 FF FF FF FF
+            FF FF FF FF FF FF FF FF FF
         </part>
     </rom>
 

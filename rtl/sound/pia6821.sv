@@ -28,6 +28,8 @@ module pia6821
     output logic       irqb,
 
     input  logic [7:0] pa_i,        // pin levels (caller resolves pull-ups)
+    input  logic       pa_pins,     // 1: port A reads the pins for output bits too (the real 6821; MAME
+                                    //    set_port_a_input_overrides_output_mask)
     output logic [7:0] pa_o,
     output logic [7:0] pa_oe,
     input  logic       ca1,
@@ -135,7 +137,7 @@ assign cb2_oe = crb[5];
 // data reads: output bits return the output register (pins are driven by this PIA), input bits the pins
 always_comb begin
     case (rs)
-        2'd0:    dout = cra[2] ? ((ora & ddra) | (pa_i & ~ddra)) : ddra;
+        2'd0:    dout = cra[2] ? (pa_pins ? pa_i : (ora & ddra) | (pa_i & ~ddra)) : ddra;
         2'd1:    dout = {irqa1, irqa2 & ~cra[5], cra};
         2'd2:    dout = crb[2] ? ((orb & ddrb) | (pb_i & ~ddrb)) : ddrb;
         default: dout = {irqb1, irqb2 & ~crb[5], crb};

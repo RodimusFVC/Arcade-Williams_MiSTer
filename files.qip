@@ -2,9 +2,15 @@ set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Williams.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_board.sv
 
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams1/williams1_main.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams1/williams_sc.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams1/williams2_video.sv
+set_global_assignment -name SEARCH_PATH rtl/boards/williams1
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams_snd/williams_sndbd.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams_snd/williams_bg.sv
 
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/pia6821.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/hc55516.sv
+set_global_assignment -name QIP_FILE rtl/sound/jt51/jt51.qip
 
 set_global_assignment -name VERILOG_FILE rtl/cpu/MC6809/mc6809is.v
 set_global_assignment -name VERILOG_FILE rtl/cpu/jt680x/jt680x.v
@@ -16,3 +22,4 @@ set_global_assignment -name SEARCH_PATH rtl/cpu/jt680x
 set_global_assignment -name VERILOG_FILE rtl/mister_custom/pause.v
 
 set_global_assignment -name VHDL_FILE rtl/ram_rom/dpram_dc.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/rom_pool.sv
