@@ -50,7 +50,9 @@
          Pads are independent; pad 2 Start = Start 2P
          IN0: Fire (Btn 2), Thrust (Btn 1), Smart Bomb, Hyperspace, Start 2, Start 1, Reverse (Btn 5), Down
          IN1: Up
-         IN2: Auto Up / Manual Down (key 0), Advance (key 9), Coin 3, High Score Reset (key 8), Coin 1, Coin 2, Tilt -->
+         IN2: Auto Up / Manual Down (key 0), Advance (key 9), Coin 3, High Score Reset (key 8), Coin 1, Coin 2, Tilt
+         Bytes 185-188 Updated Controls (Arcade-Williams.sv): flags, ship facing RAM address low / high, bit + polarity -->
+
     <rom index="1">
         <part>
             00 00 00 00 00 00 00 00 00 00 00 00 80 80 80 80
@@ -64,7 +66,7 @@
             04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
             04 05 06 07 00 01 02 FF FF FF 03 FF FF FF FF FF
             FF 04 05 06 FF FF FF FF FF FF FF 07 FF FF FF FF
-            FF FF FF FF FF FF FF FF FF
+            FF FF FF FF FF FF FF FF FF 01 BB A0 87
         </part>
     </rom>
 

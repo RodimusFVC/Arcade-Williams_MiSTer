@@ -1,5 +1,7 @@
 set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Williams.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_board.sv
+# UPDCTL-2026-10-25: Game Options > Controls: Updated (Defender family, Stargate)
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_updctl.sv
 
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams1/williams1_main.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/williams1/williams_sc.sv
@@ -20,6 +22,9 @@ set_global_assignment -name VERILOG_FILE rtl/cpu/jt680x/jt680x_regs.v
 set_global_assignment -name SEARCH_PATH rtl/cpu/jt680x
 
 set_global_assignment -name VERILOG_FILE rtl/mister_custom/pause.v
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/mister_custom/controllers.sv
 
-set_global_assignment -name VHDL_FILE rtl/ram_rom/dpram_dc.vhd
+# DPRAMSV-2026-10-25: VHDL dpram_dc replaced by the SystemVerilog one (same ports/generics + byteena); original:
+# set_global_assignment -name VHDL_FILE rtl/ram_rom/dpram_dc.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/dpram_dc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/rom_pool.sv

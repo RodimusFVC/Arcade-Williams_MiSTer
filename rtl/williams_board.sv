@@ -70,7 +70,12 @@ module williams_board
     output logic        video_vblank,
 
     output logic signed [15:0] audio,
-    output logic signed [15:0] audio_r
+    output logic signed [15:0] audio_r,
+
+    // UPDCTL-2026-10-25: main CPU write snoop for the top level's Updated Controls (williams_updctl.sv): ship facing
+    output logic [15:0] cpu_wa,
+    output logic  [7:0] cpu_wd,
+    output logic        cpu_we          // one clock per CPU bus write (the same strobe williams1_main writes with)
 );
 
 /////////////////////////////  ROM pool  /////////////////////////////
@@ -212,5 +217,10 @@ wire signed [15:0] j2_sat = (j2_mix > 18'sd32767) ? 16'sd32767 : (j2_mix < -18's
 
 assign audio   = joust2 ? j2_sat : snd_l;
 assign audio_r = (blaster | cockpit) ? snd_r : audio;
+
+// UPDCTL-2026-10-25: CPU write snoop
+assign cpu_wa = cpu_a;
+assign cpu_wd = cpu_do;
+assign cpu_we = fall_e & ~cpu_rw & ~cpu_rst;
 
 endmodule

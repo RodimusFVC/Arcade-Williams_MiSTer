@@ -46,7 +46,8 @@
         <part crc="2fcf6c4d" name="video_sound_rom_2_std_744.ic12"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, port idle levels, DIP sources, input map (tools/mra_cfg.py), ROM pool map -->
+    <!-- Index 1: board variant, flags, port idle levels, DIP sources, input map (tools/mra_cfg.py), ROM pool map,
+         bytes 185-188 Updated Controls (Arcade-Williams.sv): flags, ship facing RAM address low / high, bit + polarity -->
     <rom index="1">
         <part>
             01 00 00 00 00 00 00 00 00 00 00 00 80 80 80 80
@@ -60,7 +61,7 @@
             04 05 06 07 00 01 02 03 04 05 06 07 00 01 02 03
             04 05 06 07 00 01 02 03 04 05 06 07 08 FF FF FF
             FF 09 0A 0B FF FF FF FF FF FF FF 0C FF FF FF FF
-            FF FF FF FF FF FF FF FF FF
+            FF FF FF FF FF FF FF FF FF 03 92 9C 87
         </part>
     </rom>
 
