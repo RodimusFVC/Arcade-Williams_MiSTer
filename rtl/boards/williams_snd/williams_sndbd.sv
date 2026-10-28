@@ -40,10 +40,10 @@ module williams_sndbd
     input  logic        ext_digit,
     output logic signed [15:0] cvsd_out,
 
-    output logic [15:0] rom_a,          // program ROM in the board's pool (rtl/williams_board.sv)
+    output logic [15:0] rom_a,          // program ROM in the board's pool (rtl/williams_dispatcher.sv)
     input  logic  [7:0] rom_d,          // byte at rom_a, refreshed within 6 clocks of a change
 
-    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_board.sv); this board no longer instances them
+    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_dispatcher.sv); this board no longer instances them
     output chip_pool_pkg::m6800_i_t     m6800_i,        // MC6808 (pool m6800_0 / m6800_1)
     input  chip_pool_pkg::m6800_o_t     m6800_o,
     output chip_pool_pkg::pia6821p_i_t  pia_i,          // MC6821 (pool pia6821p slot 3 / 2)

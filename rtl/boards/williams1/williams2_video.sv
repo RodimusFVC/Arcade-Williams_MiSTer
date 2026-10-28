@@ -47,7 +47,7 @@ module williams2_video
 
     output logic [23:0] rgb,            // valid from clk 4 of the pixel
 
-    // RAMPOOL-2026-10-27: shared RAM pool blocks (rtl/williams_board.sv); this board no longer instances them
+    // RAMPOOL-2026-10-27: shared RAM pool blocks (rtl/williams_dispatcher.sv); this board no longer instances them
     output ram_pool_pkg::pram_i_t tile_pr_i,        // tile RAM 2K (pool block 3)
     input  ram_pool_pkg::pram_o_t tile_pr_o,
     output ram_pool_pkg::pram_i_t pal_lo_pr_i,      // palette RAM, even bytes 1K (pool block 5)

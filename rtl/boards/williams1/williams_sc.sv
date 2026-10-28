@@ -32,7 +32,7 @@ module williams_sc
 
     input  logic        remap_en,
     input  logic  [6:0] remap_idx,
-    // ROMPOOL-2026-10-27: original ports below; the PROM (ioctl-loaded) is now rom_remap in rtl/williams_board.sv
+    // ROMPOOL-2026-10-27: original ports below; the PROM (ioctl-loaded) is now rom_remap in rtl/williams_dispatcher.sv
     // input  logic [10:0] remap_wa,       // PROM load (ioctl)
     // input  logic  [7:0] remap_wd,
     // input  logic        remap_we,

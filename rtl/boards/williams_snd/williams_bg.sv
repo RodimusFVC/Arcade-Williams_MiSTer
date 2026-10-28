@@ -29,12 +29,12 @@ module williams_bg
     output logic [14:0] rom_a,
     input  logic  [7:0] rom_d,          // byte at rom_sel / rom_a, refreshed within 8 clocks of a change
 
-    output logic        cvsd_clk,       // to the shared HC-55516 (rtl/williams_board.sv)
+    output logic        cvsd_clk,       // to the shared HC-55516 (rtl/williams_dispatcher.sv)
     output logic        cvsd_digit,
 
     output logic signed [15:0] audio,   // DAC + YM2151 (the CVSD is mixed by the board)
 
-    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_board.sv); this board no longer instances them
+    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_dispatcher.sv); this board no longer instances them
     output chip_pool_pkg::m6809r_i_t    m6809r_i,       // MC68B09E (pool m6809r_1)
     input  chip_pool_pkg::m6809r_o_t    m6809r_o,
     output chip_pool_pkg::pia6821p_i_t  pia_i,          // MC6821 (pool pia6821p slot 2)

@@ -67,7 +67,7 @@ module williams1_main
     input  logic  [7:0] variant,
     input  logic        no_wd_flag,     // MRA flag (bootlegs that never clear the watchdog)
 
-    // MC6809E (rtl/williams_board.sv)
+    // MC6809E (rtl/williams_dispatcher.sv)
     output logic        fall_e,
     output logic        fall_q,
     output logic        cpu_rst,
@@ -79,7 +79,7 @@ module williams1_main
     input  logic        cpu_rw,
 
     // program ROM image (64K)
-    output logic [18:0] rom_a,          // williams_board.sv: 00000-0FFFF image by CPU address, 10000+ Blaster banks
+    output logic [18:0] rom_a,          // williams_dispatcher.sv: 00000-0FFFF image by CPU address, 10000+ Blaster banks
     input  logic  [7:0] rom_d,
 
     input  logic  [9:0] nv_addr,        // CMOS second port: MiSTer NVRAM load / save
@@ -98,7 +98,7 @@ module williams1_main
     input  logic  [8:0] s49,            // analog 49-way {valid, X nibble, Y nibble}
     output logic  [7:0] snd_cmd,        // to the sound board PIA port B
     output logic  [7:0] snd_cmd_r,      // Blaster: right channel sound board
-    // ROMPOOL-2026-10-27: original ports below; the Blaster SC remap PROM is now rom_remap in rtl/williams_board.sv
+    // ROMPOOL-2026-10-27: original ports below; the Blaster SC remap PROM is now rom_remap in rtl/williams_dispatcher.sv
     // input  logic [10:0] remap_wa,       // Blaster SC remap PROM load
     // input  logic  [7:0] remap_wd,
     // input  logic        remap_we,
@@ -120,12 +120,12 @@ module williams1_main
     input  logic  [3:0] h_adj,
     input  logic  [3:0] v_adj,
 
-    // CHIPPOOL-2026-10-27: shared PIA pool (rtl/williams_board.sv); slot 0 = interface PIA (IC1), 1 = ROM board PIA
+    // CHIPPOOL-2026-10-27: shared PIA pool (rtl/williams_dispatcher.sv); slot 0 = interface PIA (IC1), 1 = ROM board PIA
     // (IC22), 2 = Speed Ball's third PIA (the slot is shared with other boards' PIAs in the dispatcher)
     output chip_pool_pkg::pia6821p_i_t [2:0] pia_i,
     input  chip_pool_pkg::pia6821p_o_t [2:0] pia_o,
 
-    // RAMPOOL-2026-10-27: shared RAM pool blocks 0-6 (rtl/williams_board.sv): 0 video RAM low 32K, 1 video RAM high 16K,
+    // RAMPOOL-2026-10-27: shared RAM pool blocks 0-6 (rtl/williams_dispatcher.sv): 0 video RAM low 32K, 1 video RAM high 16K,
     // 2 D000 RAM 4K, 3 gen2 tile RAM, 4 CMOS (port B = NVRAM), 5 / 6 gen2 palette RAM
     output ram_pool_pkg::pram_i_t [6:0] pr_i,
     input  ram_pool_pkg::pram_o_t [6:0] pr_o,
@@ -208,7 +208,7 @@ wire playball = (variant == 8'd9);
 wire sc2      = (variant == 8'd5 || blaster);
 wire muxed    = (variant == 8'd3 || variant == 8'd5 || variant == 8'd10 || blaster);
 wire cmos8    = (variant == 8'd4);
-wire sinistar = (variant == 8'd6 || variant == 8'd17);   // 17: cockpit (second sound board, rtl/williams_board.sv)
+wire sinistar = (variant == 8'd6 || variant == 8'd17);   // 17: cockpit (second sound board, rtl/williams_dispatcher.sv)
 wire inferno  = (variant == 8'd12);
 wire mysticm  = (variant == 8'd13);
 wire tshoot   = (variant == 8'd14);

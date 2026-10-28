@@ -4,7 +4,7 @@
 //  (Joust 2's BG sound ROMs) of dual-port block RAM
 //  Copyright (C) 2026 Rodimus
 //
-//  Port A: ioctl load, then the time-shared readers (rtl/williams_board.sv). Port B: the main bus.
+//  Port A: ioctl load, then the time-shared readers (rtl/williams_dispatcher.sv). Port B: the main bus.
 //  39000-3FFFF and 50000 up read 0. q follows the address by one clock, as dpram_dc.
 //
 //============================================================================

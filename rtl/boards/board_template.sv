@@ -3,7 +3,7 @@
 //  Copyright (C) 2026 Rodimus
 //
 //  Boards never instantiate a CPU, sound chip, ROM store or board RAM. They live ONCE in the dispatcher
-//  rtl/williams_board.sv: main MC6809E m6809r_0 (this board's cpu_* ports), BG-board MC68B09E m6809r_1, sound
+//  rtl/williams_dispatcher.sv: main MC6809E m6809r_0 (this board's cpu_* ports), BG-board MC68B09E m6809r_1, sound
 //  MC6808s m6800_0 / m6800_1, PIAs pia6821[3:0] (slot 0 = interface PIA, 1 = ROM-board PIA, 2 = shared by variant,
 //  3 = sound board), hc55516_0, jt51_0 (chip_pool_pkg buses); the shared ROM pool (rom_pool: main bus rom_a / rom_d,
 //  time-shared sound / tile readers), rom_remap (Blaster remap PROM) and the eight board RAM pool blocks

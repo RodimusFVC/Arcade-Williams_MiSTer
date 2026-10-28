@@ -85,14 +85,14 @@ assign BUTTONS = 0;
 ///////////////////////////////////////////////////
 
 // MRA index 1 (same layout as the Exidy core):
-//   byte 0      board variant (see rtl/williams_board.sv)
+//   byte 0      board variant (see rtl/williams_dispatcher.sv)
 //   byte 1      flags: [0] 4-way joystick, [1] sound board on a 3.12 MHz crystal (Next Century), [4] vertical, [5] no watchdog (bootleg ROMs that never clear it),
 //               [6] main CPU ROM data D0 / D7 swapped (Jeutel Defender bootlegs, decoded on read), [7] vertical is ROT90
 //   bytes 4-11  idle level of every bit of the 8 ports (IN0, IN1, IN2, IN0 / IN1 for player 2 on a muxed panel, -, -, -)
 //   bytes 12-19 per port: DIP switch byte that supplies it (bit 7 set = none, use the idle byte)
 //   bytes 20-83 input map, one byte per port bit (bit 0 first): control id, 0 = none; a pressed control inverts its bit
 //   bytes 84-147 per port bit: which bit of its DIP switch byte supplies it
-//   bytes 148-184 ROM pool map (rtl/williams_board.sv): 16 main pages, 8 sound pages, bank base, tile base,
+//   bytes 148-184 ROM pool map (rtl/williams_dispatcher.sv): 16 main pages, 8 sound pages, bank base, tile base,
 //               8 sound pages for the second sound board, BG sound ROM bases U4 / U19 / U20 (Joust 2)
 //   bytes 185-188 Updated Controls (UPDCTL-2026-10-25, rtl/williams_updctl.sv; absent = not supported, option hidden):
 //               185 [0] supported (shows Game Options > Controls) [1] Btn 5 -> Inviso, Btn 6 -> Pause (Stargate)
@@ -637,7 +637,7 @@ arcade_video #(320,24) arcade_video
 
 ///////////////                 Board                  ////////////////
 
-williams_board board
+williams_dispatcher board
 (
 	.clk(CLK_SYS),
 	.reset(reset),

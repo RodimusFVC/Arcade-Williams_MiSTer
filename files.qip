@@ -2,7 +2,7 @@
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/chip_pool_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_pool_pkg.sv
 set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Williams.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_board.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_dispatcher.sv
 # UPDCTL-2026-10-25: Game Options > Controls: Updated (Defender family, Stargate)
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/williams_updctl.sv
 

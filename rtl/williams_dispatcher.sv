@@ -28,7 +28,7 @@
 //
 //============================================================================
 
-module williams_board
+module williams_dispatcher
 (
     input  logic        clk,            // 48 MHz
     input  logic        reset,
