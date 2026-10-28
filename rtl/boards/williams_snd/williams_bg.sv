@@ -32,7 +32,18 @@ module williams_bg
     output logic        cvsd_clk,       // to the shared HC-55516 (rtl/williams_board.sv)
     output logic        cvsd_digit,
 
-    output logic signed [15:0] audio    // DAC + YM2151 (the CVSD is mixed by the board)
+    output logic signed [15:0] audio,   // DAC + YM2151 (the CVSD is mixed by the board)
+
+    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_board.sv); this board no longer instances them
+    output chip_pool_pkg::m6809r_i_t    m6809r_i,       // MC68B09E (pool m6809r_1)
+    input  chip_pool_pkg::m6809r_o_t    m6809r_o,
+    output chip_pool_pkg::pia6821p_i_t  pia_i,          // MC6821 (pool pia6821p slot 2)
+    input  chip_pool_pkg::pia6821p_o_t  pia_o,
+    output chip_pool_pkg::jt51_i_t      jt51_i,         // YM2151 (pool jt51_0)
+    input  chip_pool_pkg::jt51_o_t      jt51_o,
+    // RAMPOOL-2026-10-27: board RAM 2K (pool block 2, shared with the D000 RAM of the main board)
+    output ram_pool_pkg::pram_i_t       pr_i,
+    input  ram_pool_pkg::pram_o_t       pr_o
 );
 
 /////////////////////////////  MC68B09E, E = 2 MHz  /////////////////////////////
@@ -58,12 +69,23 @@ logic  [7:0] cpu_do, cpu_di;
 logic        rnw;
 logic        irqa, irqb;
 
-mc6809is bg_cpu
-(
-    .CLK(clk), .fallE_en(fall_e), .fallQ_en(fall_q), .D(cpu_di), .DOut(cpu_do), .ADDR(a),
-    .RnW(rnw), .BS(), .BA(), .nIRQ(1'b1), .nFIRQ(~irqa), .nNMI(~irqb), .AVMA(), .BUSY(),
-    .LIC(), .nHALT(1'b1), .nRESET(~cpu_rst), .nDMABREQ(1'b1), .RegData()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (m6809r_1)
+// mc6809is bg_cpu
+// (
+//     .CLK(clk), .fallE_en(fall_e), .fallQ_en(fall_q), .D(cpu_di), .DOut(cpu_do), .ADDR(a),
+//     .RnW(rnw), .BS(), .BA(), .nIRQ(1'b1), .nFIRQ(~irqa), .nNMI(~irqb), .AVMA(), .BUSY(),
+//     .LIC(), .nHALT(1'b1), .nRESET(~cpu_rst), .nDMABREQ(1'b1), .RegData()
+// );
+assign m6809r_i.reset_n = ~cpu_rst;
+assign m6809r_i.fall_e  = fall_e;
+assign m6809r_i.fall_q  = fall_q;
+assign m6809r_i.irq_n   = 1'b1;
+assign m6809r_i.firq_n  = ~irqa;
+assign m6809r_i.nmi_n   = ~irqb;
+assign m6809r_i.d       = cpu_di;
+assign a      = m6809r_o.a;
+assign cpu_do = m6809r_o.dout;
+assign rnw    = m6809r_o.rw;
 
 wire wr     = fall_e & ~rnw & ~cpu_rst;
 wire cs_ram = a[15:13] == 3'b000;
@@ -74,11 +96,19 @@ wire cs_rom = a[15];
 /////////////////////////////  RAM / bank / CVSD latches  /////////////////////////////
 
 logic [7:0] ram_q;
-dpram_dc #(.widthad_a(11)) ram
-(
-    .clock_a(clk), .address_a(a[10:0]), .data_a(cpu_do), .wren_a(wr & cs_ram), .q_a(ram_q),
-    .clock_b(clk)
-);
+// RAMPOOL-2026-10-27: original instance below, now a pool block
+// dpram_dc #(.widthad_a(11)) ram
+// (
+//     .clock_a(clk), .address_a(a[10:0]), .data_a(cpu_do), .wren_a(wr & cs_ram), .q_a(ram_q),
+//     .clock_b(clk)
+// );
+assign pr_i.a_addr = {4'd0, a[10:0]};
+assign pr_i.a_d    = cpu_do;
+assign pr_i.a_we   = wr & cs_ram;
+assign pr_i.b_addr = 15'd0;
+assign pr_i.b_d    = 8'h00;
+assign pr_i.b_we   = 1'b0;
+assign ram_q = pr_o.a_q;
 
 logic [1:0] bank = 2'd0;
 always_ff @(posedge clk) begin
@@ -97,16 +127,38 @@ assign rom_a   = a[14:0];
 logic [7:0] pia_do, pa_o, pa_oe;
 logic       ca2_o, ca2_oe, cb2_o, ym_irq_n;
 
-pia6821 pia
-(
-    .clk(clk), .rst(reset),
-    .ce(fall_e & cs_pia & ~cpu_rst),
-    .cs(cs_pia), .rw(rnw), .rs(a[1:0]), .din(cpu_do), .dout(pia_do),
-    .irqa(irqa), .irqb(irqb),
-    .pa_i(8'hFF), .pa_pins(1'b0), .pa_o(pa_o), .pa_oe(pa_oe),
-    .ca1(ym_irq_n), .ca2_i(1'b1), .ca2_o(ca2_o), .ca2_oe(ca2_oe),
-    .pb_i(data), .pb_o(), .pb_oe(), .cb1(strobe), .cb2_i(1'b1), .cb2_o(cb2_o), .cb2_oe()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (pia6821 pool)
+// pia6821 pia
+// (
+//     .clk(clk), .rst(reset),
+//     .ce(fall_e & cs_pia & ~cpu_rst),
+//     .cs(cs_pia), .rw(rnw), .rs(a[1:0]), .din(cpu_do), .dout(pia_do),
+//     .irqa(irqa), .irqb(irqb),
+//     .pa_i(8'hFF), .pa_pins(1'b0), .pa_o(pa_o), .pa_oe(pa_oe),
+//     .ca1(ym_irq_n), .ca2_i(1'b1), .ca2_o(ca2_o), .ca2_oe(ca2_oe),
+//     .pb_i(data), .pb_o(), .pb_oe(), .cb1(strobe), .cb2_i(1'b1), .cb2_o(cb2_o), .cb2_oe()
+// );
+assign pia_i.rst     = reset;
+assign pia_i.ce      = fall_e & cs_pia & ~cpu_rst;
+assign pia_i.cs      = cs_pia;
+assign pia_i.rw      = rnw;
+assign pia_i.rs      = a[1:0];
+assign pia_i.din     = cpu_do;
+assign pia_i.pa_i    = 8'hFF;
+assign pia_i.pa_pins = 1'b0;
+assign pia_i.ca1     = ym_irq_n;
+assign pia_i.ca2_i   = 1'b1;
+assign pia_i.pb_i    = data;
+assign pia_i.cb1     = strobe;
+assign pia_i.cb2_i   = 1'b1;
+assign pia_do = pia_o.dout;
+assign irqa   = pia_o.irqa;
+assign irqb   = pia_o.irqb;
+assign pa_o   = pia_o.pa_o;
+assign pa_oe  = pia_o.pa_oe;
+assign ca2_o  = pia_o.ca2_o;
+assign ca2_oe = pia_o.ca2_oe;
+assign cb2_o  = pia_o.cb2_o;
 
 assign cb2 = cb2_o;
 
@@ -151,12 +203,24 @@ always_ff @(posedge clk) begin
     else if (ym_rcnt != 6'd0) ym_rcnt <= ym_rcnt - 6'd1;
 end
 
-jt51 ym
-(
-    .rst(reset || ym_rcnt != 6'd0), .clk(clk), .cen(ym_cen), .cen_p1(ym_p1),
-    .cs_n(!(ym_wr || (cs_ym && rnw))), .wr_n(!ym_wr), .a0(ym_wr ? ym_a0 : a[0]), .din(ym_din), .dout(ym_do),
-    .ct1(), .ct2(), .irq_n(ym_irq_n), .sample(), .left(ym_l), .right(ym_r), .xleft(), .xright()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (jt51_0)
+// jt51 ym
+// (
+//     .rst(reset || ym_rcnt != 6'd0), .clk(clk), .cen(ym_cen), .cen_p1(ym_p1),
+//     .cs_n(!(ym_wr || (cs_ym && rnw))), .wr_n(!ym_wr), .a0(ym_wr ? ym_a0 : a[0]), .din(ym_din), .dout(ym_do),
+//     .ct1(), .ct2(), .irq_n(ym_irq_n), .sample(), .left(ym_l), .right(ym_r), .xleft(), .xright()
+// );
+assign jt51_i.rst    = reset || ym_rcnt != 6'd0;
+assign jt51_i.cen    = ym_cen;
+assign jt51_i.cen_p1 = ym_p1;
+assign jt51_i.cs_n   = !(ym_wr || (cs_ym && rnw));
+assign jt51_i.wr_n   = !ym_wr;
+assign jt51_i.a0     = ym_wr ? ym_a0 : a[0];
+assign jt51_i.din    = ym_din;
+assign ym_do    = jt51_o.dout;
+assign ym_irq_n = jt51_o.irq_n;
+assign ym_l     = jt51_o.left;
+assign ym_r     = jt51_o.right;
 
 always_comb begin
     if      (cs_ram) cpu_di = ram_q;

@@ -45,7 +45,15 @@ module williams2_video
     output logic [15:0] rom_a,
     input  logic  [7:0] rom_q,
 
-    output logic [23:0] rgb             // valid from clk 4 of the pixel
+    output logic [23:0] rgb,            // valid from clk 4 of the pixel
+
+    // RAMPOOL-2026-10-27: shared RAM pool blocks (rtl/williams_board.sv); this board no longer instances them
+    output ram_pool_pkg::pram_i_t tile_pr_i,        // tile RAM 2K (pool block 3)
+    input  ram_pool_pkg::pram_o_t tile_pr_o,
+    output ram_pool_pkg::pram_i_t pal_lo_pr_i,      // palette RAM, even bytes 1K (pool block 5)
+    input  ram_pool_pkg::pram_o_t pal_lo_pr_o,
+    output ram_pool_pkg::pram_i_t pal_hi_pr_i,      // palette RAM, odd bytes 1K (pool block 6)
+    input  ram_pool_pkg::pram_o_t pal_hi_pr_o
 );
 
 `include "williams2_lut.svh"
@@ -73,11 +81,20 @@ wire [3:0] row = fy[7:4];
 /////////////////////////////  Tile RAM / ROM  /////////////////////////////
 
 logic [7:0] tcode;
-dpram_dc #(.widthad_a(11)) tile_ram
-(
-    .clock_a(clk), .address_a(cpu_a), .data_a(cpu_d), .wren_a(tile_we), .q_a(tile_q),
-    .clock_b(clk), .address_b({col, row}), .q_b(tcode)
-);
+// RAMPOOL-2026-10-27: original instance below, now pool block 3
+// dpram_dc #(.widthad_a(11)) tile_ram
+// (
+//     .clock_a(clk), .address_a(cpu_a), .data_a(cpu_d), .wren_a(tile_we), .q_a(tile_q),
+//     .clock_b(clk), .address_b({col, row}), .q_b(tcode)
+// );
+assign tile_pr_i.a_addr = {4'd0, cpu_a};
+assign tile_pr_i.a_d    = cpu_d;
+assign tile_pr_i.a_we   = tile_we;
+assign tile_pr_i.b_addr = {4'd0, col, row};
+assign tile_pr_i.b_d    = 8'h00;
+assign tile_pr_i.b_we   = 1'b0;
+assign tile_q = tile_pr_o.a_q;
+assign tcode  = tile_pr_o.b_q;
 
 // held from clk 1 for the ROM and the pen
 logic [1:0] byte_r;
@@ -107,16 +124,33 @@ wire [5:0] bg_col = joust2 ? bg_sel[5:0] : mysticm ? {bg_sel[5:1], my0} : {bg_se
 wire [9:0] pen = (fg_pix != 4'd0) ? {fg_color, fg_pix} : {bg_col, bg_pix};
 
 logic [7:0] pal_lo, pal_hi, pal_lo_c, pal_hi_c;
-dpram_dc #(.widthad_a(10)) pal_ram_lo
-(
-    .clock_a(clk), .address_a(cpu_a[10:1]), .data_a(cpu_d), .wren_a(pal_we && !cpu_a[0]), .q_a(pal_lo_c),
-    .clock_b(clk), .address_b(pen), .q_b(pal_lo)
-);
-dpram_dc #(.widthad_a(10)) pal_ram_hi
-(
-    .clock_a(clk), .address_a(cpu_a[10:1]), .data_a(cpu_d), .wren_a(pal_we &&  cpu_a[0]), .q_a(pal_hi_c),
-    .clock_b(clk), .address_b(pen), .q_b(pal_hi)
-);
+// RAMPOOL-2026-10-27: original instances below, now pool blocks 5 / 6
+// dpram_dc #(.widthad_a(10)) pal_ram_lo
+// (
+//     .clock_a(clk), .address_a(cpu_a[10:1]), .data_a(cpu_d), .wren_a(pal_we && !cpu_a[0]), .q_a(pal_lo_c),
+//     .clock_b(clk), .address_b(pen), .q_b(pal_lo)
+// );
+// dpram_dc #(.widthad_a(10)) pal_ram_hi
+// (
+//     .clock_a(clk), .address_a(cpu_a[10:1]), .data_a(cpu_d), .wren_a(pal_we &&  cpu_a[0]), .q_a(pal_hi_c),
+//     .clock_b(clk), .address_b(pen), .q_b(pal_hi)
+// );
+assign pal_lo_pr_i.a_addr = {5'd0, cpu_a[10:1]};
+assign pal_lo_pr_i.a_d    = cpu_d;
+assign pal_lo_pr_i.a_we   = pal_we && !cpu_a[0];
+assign pal_lo_pr_i.b_addr = {5'd0, pen};
+assign pal_lo_pr_i.b_d    = 8'h00;
+assign pal_lo_pr_i.b_we   = 1'b0;
+assign pal_lo_c = pal_lo_pr_o.a_q;
+assign pal_lo   = pal_lo_pr_o.b_q;
+assign pal_hi_pr_i.a_addr = {5'd0, cpu_a[10:1]};
+assign pal_hi_pr_i.a_d    = cpu_d;
+assign pal_hi_pr_i.a_we   = pal_we &&  cpu_a[0];
+assign pal_hi_pr_i.b_addr = {5'd0, pen};
+assign pal_hi_pr_i.b_d    = 8'h00;
+assign pal_hi_pr_i.b_we   = 1'b0;
+assign pal_hi_c = pal_hi_pr_o.a_q;
+assign pal_hi   = pal_hi_pr_o.b_q;
 assign pal_q = cpu_a[0] ? pal_hi_c : pal_lo_c;
 
 wire [3:0] inten = pal_hi[7:4];

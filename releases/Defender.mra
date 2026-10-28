@@ -25,7 +25,7 @@
     <joystick>2-way vertical</joystick>
     <special_controls></special_controls>
     <num_buttons>5</num_buttons>
-    <buttons names="Thrust,Fire,Smart Bomb,Hyperspace,Coin,Start,-,Pause,Reverse,-" default="A,B,X,Y,Select,Start,L,R"/>
+    <buttons names="Thrust,Fire,Smart Bomb,Hyperspace,Coin,Start,-,Pause,Reverse,-,Advance,Auto Up,HS Reset" default="A,B,X,Y,Select,Start,L,R"/>
 
     <!-- Index 0: ROM pool image (8 x 4K pages: C000 window pages 1-7, D000-FFFF, sound; map in index 1 bytes 148-173),
          rtl/williams_board.sv. Part list from tools/make_mra.py layout() -->

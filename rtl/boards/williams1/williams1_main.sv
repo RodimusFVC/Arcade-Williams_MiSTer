@@ -98,9 +98,14 @@ module williams1_main
     input  logic  [8:0] s49,            // analog 49-way {valid, X nibble, Y nibble}
     output logic  [7:0] snd_cmd,        // to the sound board PIA port B
     output logic  [7:0] snd_cmd_r,      // Blaster: right channel sound board
-    input  logic [10:0] remap_wa,       // Blaster SC remap PROM load
-    input  logic  [7:0] remap_wd,
-    input  logic        remap_we,
+    // ROMPOOL-2026-10-27: original ports below; the Blaster SC remap PROM is now rom_remap in rtl/williams_board.sv
+    // input  logic [10:0] remap_wa,       // Blaster SC remap PROM load
+    // input  logic  [7:0] remap_wd,
+    // input  logic        remap_we,
+    output logic [10:0] remap_a_a,      // remap PROM read ports (rom_remap, port A / B)
+    input  logic  [7:0] remap_a_q,
+    output logic [10:0] remap_b_a,
+    input  logic  [7:0] remap_b_q,
     output logic  [2:0] pc,             // clock within the pixel: the board's ROM pool slots
     output logic [15:0] tile_a,         // gen2 tile ROM (pool slot clk 1)
     output logic        bg_strobe,      // Joust 2: ROM-board PIA CA2 -> BG sound board
@@ -114,6 +119,16 @@ module williams1_main
     input  logic        crt_flip,
     input  logic  [3:0] h_adj,
     input  logic  [3:0] v_adj,
+
+    // CHIPPOOL-2026-10-27: shared PIA pool (rtl/williams_board.sv); slot 0 = interface PIA (IC1), 1 = ROM board PIA
+    // (IC22), 2 = Speed Ball's third PIA (the slot is shared with other boards' PIAs in the dispatcher)
+    output chip_pool_pkg::pia6821p_i_t [2:0] pia_i,
+    input  chip_pool_pkg::pia6821p_o_t [2:0] pia_o,
+
+    // RAMPOOL-2026-10-27: shared RAM pool blocks 0-6 (rtl/williams_board.sv): 0 video RAM low 32K, 1 video RAM high 16K,
+    // 2 D000 RAM 4K, 3 gen2 tile RAM, 4 CMOS (port B = NVRAM), 5 / 6 gen2 palette RAM
+    output ram_pool_pkg::pram_i_t [6:0] pr_i,
+    input  ram_pool_pkg::pram_o_t [6:0] pr_o,
 
     output logic        ce_pix,
     output logic  [7:0] video_r,
@@ -325,16 +340,33 @@ wire  [15:0] va_cpu = may_prot ? ba + 16'd3 : ba;
 logic        vsel_a, vsel_b;
 logic  [7:0] vlo_a, vhi_a, vlo_b, vhi_b;
 always_ff @(posedge clk) begin vsel_a <= va_cpu[15]; vsel_b <= vid_a[15]; end
-dpram_dc #(.widthad_a(15)) vram_lo
-(
-    .clock_a(clk), .address_a(va_cpu[14:0]), .data_a(bdo), .wren_a(wr & cs_vram & ~va_cpu[15]), .q_a(vlo_a),
-    .clock_b(clk), .address_b(vid_a[14:0]), .data_b(8'h00), .wren_b(vid_we & ~vid_a[15]), .q_b(vlo_b)
-);
-dpram_dc #(.widthad_a(14)) vram_hi
-(
-    .clock_a(clk), .address_a(va_cpu[13:0]), .data_a(bdo), .wren_a(wr & cs_vram & va_cpu[15]), .q_a(vhi_a),
-    .clock_b(clk), .address_b(vid_a[13:0]), .data_b(8'h00), .wren_b(vid_we & vid_a[15]), .q_b(vhi_b)
-);
+// RAMPOOL-2026-10-27: original instances below, now pool blocks 0 / 1
+// dpram_dc #(.widthad_a(15)) vram_lo
+// (
+//     .clock_a(clk), .address_a(va_cpu[14:0]), .data_a(bdo), .wren_a(wr & cs_vram & ~va_cpu[15]), .q_a(vlo_a),
+//     .clock_b(clk), .address_b(vid_a[14:0]), .data_b(8'h00), .wren_b(vid_we & ~vid_a[15]), .q_b(vlo_b)
+// );
+// dpram_dc #(.widthad_a(14)) vram_hi
+// (
+//     .clock_a(clk), .address_a(va_cpu[13:0]), .data_a(bdo), .wren_a(wr & cs_vram & va_cpu[15]), .q_a(vhi_a),
+//     .clock_b(clk), .address_b(vid_a[13:0]), .data_b(8'h00), .wren_b(vid_we & vid_a[15]), .q_b(vhi_b)
+// );
+assign pr_i[0].a_addr = va_cpu[14:0];
+assign pr_i[0].a_d    = bdo;
+assign pr_i[0].a_we   = wr & cs_vram & ~va_cpu[15];
+assign pr_i[0].b_addr = vid_a[14:0];
+assign pr_i[0].b_d    = 8'h00;
+assign pr_i[0].b_we   = vid_we & ~vid_a[15];
+assign vlo_a = pr_o[0].a_q;
+assign vlo_b = pr_o[0].b_q;
+assign pr_i[1].a_addr = {1'b0, va_cpu[13:0]};
+assign pr_i[1].a_d    = bdo;
+assign pr_i[1].a_we   = wr & cs_vram & va_cpu[15];
+assign pr_i[1].b_addr = {1'b0, vid_a[13:0]};
+assign pr_i[1].b_d    = 8'h00;
+assign pr_i[1].b_we   = vid_we & vid_a[15];
+assign vhi_a = pr_o[1].a_q;
+assign vhi_b = pr_o[1].b_q;
 assign vram_cpu_q = vsel_a ? vhi_a : vlo_a;
 assign vram_q     = vsel_b ? vhi_b : vlo_b;
 
@@ -347,20 +379,37 @@ always_ff @(posedge clk)
 // 5101 (Defender, 256 x 4) / 5114 (1K x 4) CMOS, D3-D0 only: MAME stores data | F0 and reads the byte back.
 // Bubbles has a second 5114 for the full 8 bits.
 logic [7:0] cmos_q;
-dpram_dc #(.widthad_a(10)) cmos_ram
-(
-    .clock_a(clk), .address_a(defender ? {2'b00, ba[7:0]} : ba[9:0]), .data_a(cmos8 ? bdo : bdo | 8'hF0),
-    .wren_a(wr & cs_cmos), .q_a(cmos_q),
-    .clock_b(clk), .address_b(nv_addr), .data_b(nv_din), .wren_b(nv_we), .q_b(nv_dout)
-);
+// RAMPOOL-2026-10-27: original instance below, now pool block 4 (port A = CPU, port B = NVRAM, same addresses)
+// dpram_dc #(.widthad_a(10)) cmos_ram
+// (
+//     .clock_a(clk), .address_a(defender ? {2'b00, ba[7:0]} : ba[9:0]), .data_a(cmos8 ? bdo : bdo | 8'hF0),
+//     .wren_a(wr & cs_cmos), .q_a(cmos_q),
+//     .clock_b(clk), .address_b(nv_addr), .data_b(nv_din), .wren_b(nv_we), .q_b(nv_dout)
+// );
+assign pr_i[4].a_addr = {5'd0, defender ? {2'b00, ba[7:0]} : ba[9:0]};
+assign pr_i[4].a_d    = cmos8 ? bdo : bdo | 8'hF0;
+assign pr_i[4].a_we   = wr & cs_cmos;
+assign pr_i[4].b_addr = {5'd0, nv_addr};
+assign pr_i[4].b_d    = nv_din;
+assign pr_i[4].b_we   = nv_we;
+assign cmos_q  = pr_o[4].a_q;
+assign nv_dout = pr_o[4].b_q;
 
 // Sinistar: 4K static RAM at D000-DFFF
 logic [7:0] dram_q;
-dpram_dc #(.widthad_a(12)) d000_ram
-(
-    .clock_a(clk), .address_a(ba[11:0]), .data_a(bdo), .wren_a(wr & g_dram), .q_a(dram_q),
-    .clock_b(clk)
-);
+// RAMPOOL-2026-10-27: original instance below, now pool block 2 (shared with the Joust 2 BG board RAM)
+// dpram_dc #(.widthad_a(12)) d000_ram
+// (
+//     .clock_a(clk), .address_a(ba[11:0]), .data_a(bdo), .wren_a(wr & g_dram), .q_a(dram_q),
+//     .clock_b(clk)
+// );
+assign pr_i[2].a_addr = {3'd0, ba[11:0]};
+assign pr_i[2].a_d    = bdo;
+assign pr_i[2].a_we   = wr & g_dram;
+assign pr_i[2].b_addr = 15'd0;
+assign pr_i[2].b_d    = 8'h00;
+assign pr_i[2].b_we   = 1'b0;
+assign dram_q = pr_o[2].a_q;
 
 /////////////////////////////  Special Chip  /////////////////////////////
 
@@ -370,7 +419,8 @@ williams_sc sc
     .reg_we(wr & (g_sc | w_sc) & ~sc_busy), .reg_a(cpu_a[2:0]), .reg_d(cpu_do),
     .size_xor((sc2 | gen2) ? 3'd0 : 3'd4), .clip_addr(sinistar ? 16'h7400 : blaster ? 16'h9700 : gen2 ? 16'h9000 : 16'hC000),
     .window(gen2 ? w_window : sc_window),
-    .remap_en(blaster), .remap_idx(bl_remap), .remap_wa(remap_wa), .remap_wd(remap_wd), .remap_we(remap_we),
+    // ROMPOOL-2026-10-27: original: .remap_wa(remap_wa), .remap_wd(remap_wd), .remap_we(remap_we)
+    .remap_en(blaster), .remap_idx(bl_remap), .remap_a_a(remap_a_a), .remap_a_q(remap_a_q), .remap_b_a(remap_b_a), .remap_b_q(remap_b_q),
     .busy(sc_busy), .a(sc_a), .dout(sc_do), .we(sc_we), .din(cpu_di), .vram_q(vram_cpu_q)
 );
 
@@ -413,34 +463,94 @@ assign s2_bus = (pia1_pb & pia1_pb_oe) | (s2_pa_o & s2_pa_oe & ~pia1_pb_oe) | ~(
 assign s2_cb2 = pia1_cb2;
 
 // IC1 interface board: player panel
-pia6821 pia0
-(
-    .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(cs_pia0), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia0_do),
-    .irqa(pia0_irqa), .irqb(pia0_irqb),
-    .pa_i(pa0_in), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(gen2 ? endscreen : 1'b0), .ca2_i(1'b0),
-    .ca2_o(pia0_ca2), .ca2_oe(pia0_ca2_oe),
-    .pb_i(pb0_in), .pb_o(pia0_pb), .pb_oe(pia0_pb_oe), .cb1(gen2 ? va11 : 1'b0), .cb2_i(1'b0), .cb2_o(pia0_cb2), .cb2_oe(pia0_cb2_oe)
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (pia6821 pool slot 0)
+// pia6821 pia0
+// (
+//     .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(cs_pia0), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia0_do),
+//     .irqa(pia0_irqa), .irqb(pia0_irqb),
+//     .pa_i(pa0_in), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(gen2 ? endscreen : 1'b0), .ca2_i(1'b0),
+//     .ca2_o(pia0_ca2), .ca2_oe(pia0_ca2_oe),
+//     .pb_i(pb0_in), .pb_o(pia0_pb), .pb_oe(pia0_pb_oe), .cb1(gen2 ? va11 : 1'b0), .cb2_i(1'b0), .cb2_o(pia0_cb2), .cb2_oe(pia0_cb2_oe)
+// );
+assign pia_i[0].rst     = cpu_rst;
+assign pia_i[0].ce      = pia_e;
+assign pia_i[0].cs      = cs_pia0;
+assign pia_i[0].rw      = cpu_rw;
+assign pia_i[0].rs      = cpu_a[1:0];
+assign pia_i[0].din     = cpu_do;
+assign pia_i[0].pa_i    = pa0_in;
+assign pia_i[0].pa_pins = 1'b0;
+assign pia_i[0].ca1     = gen2 ? endscreen : 1'b0;
+assign pia_i[0].ca2_i   = 1'b0;
+assign pia_i[0].pb_i    = pb0_in;
+assign pia_i[0].cb1     = gen2 ? va11 : 1'b0;
+assign pia_i[0].cb2_i   = 1'b0;
+assign pia0_do     = pia_o[0].dout;
+assign pia0_irqa   = pia_o[0].irqa;
+assign pia0_irqb   = pia_o[0].irqb;
+assign pia0_ca2    = pia_o[0].ca2_o;
+assign pia0_ca2_oe = pia_o[0].ca2_oe;
+assign pia0_pb     = pia_o[0].pb_o;
+assign pia0_pb_oe  = pia_o[0].pb_oe;
+assign pia0_cb2    = pia_o[0].cb2_o;
+assign pia0_cb2_oe = pia_o[0].cb2_oe;
 
 // IC22 ROM board: coin door in, sound select out, COUNT 240 on CA1, VA11 on CB1
-pia6821 pia1
-(
-    .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(cs_pia1), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia1_do),
-    .irqa(pia1_irqa), .irqb(pia1_irqb),
-    .pa_i(in2), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(gen2 ? va11 : count240), .ca2_i(1'b0), .ca2_o(pia1_ca2), .ca2_oe(pia1_ca2_oe),
-    .pb_i(gen2 ? s2_bus : 8'hFF), .pb_o(pia1_pb), .pb_oe(pia1_pb_oe), .cb1(gen2 ? s2_ca2 : va11), .cb2_i(1'b0),
-    .cb2_o(pia1_cb2), .cb2_oe()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (pia6821 pool slot 1)
+// pia6821 pia1
+// (
+//     .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(cs_pia1), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia1_do),
+//     .irqa(pia1_irqa), .irqb(pia1_irqb),
+//     .pa_i(in2), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(gen2 ? va11 : count240), .ca2_i(1'b0), .ca2_o(pia1_ca2), .ca2_oe(pia1_ca2_oe),
+//     .pb_i(gen2 ? s2_bus : 8'hFF), .pb_o(pia1_pb), .pb_oe(pia1_pb_oe), .cb1(gen2 ? s2_ca2 : va11), .cb2_i(1'b0),
+//     .cb2_o(pia1_cb2), .cb2_oe()
+// );
+assign pia_i[1].rst     = cpu_rst;
+assign pia_i[1].ce      = pia_e;
+assign pia_i[1].cs      = cs_pia1;
+assign pia_i[1].rw      = cpu_rw;
+assign pia_i[1].rs      = cpu_a[1:0];
+assign pia_i[1].din     = cpu_do;
+assign pia_i[1].pa_i    = in2;
+assign pia_i[1].pa_pins = 1'b0;
+assign pia_i[1].ca1     = gen2 ? va11 : count240;
+assign pia_i[1].ca2_i   = 1'b0;
+assign pia_i[1].pb_i    = gen2 ? s2_bus : 8'hFF;
+assign pia_i[1].cb1     = gen2 ? s2_ca2 : va11;
+assign pia_i[1].cb2_i   = 1'b0;
+assign pia1_do     = pia_o[1].dout;
+assign pia1_irqa   = pia_o[1].irqa;
+assign pia1_irqb   = pia_o[1].irqb;
+assign pia1_ca2    = pia_o[1].ca2_o;
+assign pia1_ca2_oe = pia_o[1].ca2_oe;
+assign pia1_pb     = pia_o[1].pb_o;
+assign pia1_pb_oe  = pia_o[1].pb_oe;
+assign pia1_cb2    = pia_o[1].cb2_o;
 
 // Speed Ball third PIA (C808): IN3 / IN4
 logic [7:0] pia3_do;
-pia6821 pia3
-(
-    .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(!sc_busy && g_pia3), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia3_do),
-    .irqa(), .irqb(),
-    .pa_i(in3), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(1'b0), .ca2_i(1'b0), .ca2_o(), .ca2_oe(),
-    .pb_i(in4), .pb_o(), .pb_oe(), .cb1(1'b0), .cb2_i(1'b0), .cb2_o(), .cb2_oe()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (pia6821 pool slot 2, shared with the sound boards' PIAs)
+// pia6821 pia3
+// (
+//     .clk(clk), .rst(cpu_rst), .ce(pia_e), .cs(!sc_busy && g_pia3), .rw(cpu_rw), .rs(cpu_a[1:0]), .din(cpu_do), .dout(pia3_do),
+//     .irqa(), .irqb(),
+//     .pa_i(in3), .pa_pins(1'b0), .pa_o(), .pa_oe(), .ca1(1'b0), .ca2_i(1'b0), .ca2_o(), .ca2_oe(),
+//     .pb_i(in4), .pb_o(), .pb_oe(), .cb1(1'b0), .cb2_i(1'b0), .cb2_o(), .cb2_oe()
+// );
+assign pia_i[2].rst     = cpu_rst;
+assign pia_i[2].ce      = pia_e;
+assign pia_i[2].cs      = !sc_busy && g_pia3;
+assign pia_i[2].rw      = cpu_rw;
+assign pia_i[2].rs      = cpu_a[1:0];
+assign pia_i[2].din     = cpu_do;
+assign pia_i[2].pa_i    = in3;
+assign pia_i[2].pa_pins = 1'b0;
+assign pia_i[2].ca1     = 1'b0;
+assign pia_i[2].ca2_i   = 1'b0;
+assign pia_i[2].pb_i    = in4;
+assign pia_i[2].cb1     = 1'b0;
+assign pia_i[2].cb2_i   = 1'b0;
+assign pia3_do = pia_o[2].dout;
 
 assign irq_n  = ~(pia1_irqa | pia1_irqb | (mysticm & pia0_irqb) | (tshoot & (pia0_irqa | pia0_irqb)));
 assign firq_n = ~(mysticm & pia0_irqa);
@@ -539,7 +649,9 @@ williams2_video w2_video
     .fg_color(w_fg), .bg_sel(w_bg), .xscroll(w_xs),
     .cpu_a(ba[10:0]), .cpu_d(bdo), .tile_we(wr & w_tile), .pal_we(wr & w_palv), .tile_q(w2_tile_q), .pal_q(w2_pal_q),
     .rom_a(tile_a), .rom_q(tile_d),
-    .rgb(w2_rgb)
+    .rgb(w2_rgb),
+    .tile_pr_i(pr_i[3]), .tile_pr_o(pr_o[3]), .pal_lo_pr_i(pr_i[5]), .pal_lo_pr_o(pr_o[5]),
+    .pal_hi_pr_i(pr_i[6]), .pal_hi_pr_o(pr_o[6])
 );
 
 wire [23:0] rgb = gen2 ? w2_rgb : (blaster && nib == 4'd0) ? (color0 | pen(pal[0])) : pen(col);

@@ -32,9 +32,14 @@ module williams_sc
 
     input  logic        remap_en,
     input  logic  [6:0] remap_idx,
-    input  logic [10:0] remap_wa,       // PROM load (ioctl)
-    input  logic  [7:0] remap_wd,
-    input  logic        remap_we,
+    // ROMPOOL-2026-10-27: original ports below; the PROM (ioctl-loaded) is now rom_remap in rtl/williams_board.sv
+    // input  logic [10:0] remap_wa,       // PROM load (ioctl)
+    // input  logic  [7:0] remap_wd,
+    // input  logic        remap_we,
+    output logic [10:0] remap_a_a,      // PROM read port A (high nibble table entry)
+    input  logic  [7:0] remap_a_q,
+    output logic [10:0] remap_b_a,      // PROM read port B (low nibble table entry)
+    input  logic  [7:0] remap_b_q,
 
     output logic        busy,
     output logic [15:0] a,              // bus master while busy
@@ -58,12 +63,18 @@ logic [3:0]  st = 4'd0;
 logic [7:0]  raw;
 logic [7:0]  map_hi, map_lo;
 
-dpram_dc #(.widthad_a(11)) remap_prom
-(
-    .clock_a(clk), .address_a(remap_we ? remap_wa : {remap_idx, raw[7:4]}), .data_a(remap_wd), .wren_a(remap_we),
-    .q_a(map_hi),
-    .clock_b(clk), .address_b({remap_idx, raw[3:0]}), .q_b(map_lo)
-);
+// ROMPOOL-2026-10-27: original instance below, now rom_remap in the dispatcher (its port A address is muxed with the
+// ioctl load address there)
+// dpram_dc #(.widthad_a(11)) remap_prom
+// (
+//     .clock_a(clk), .address_a(remap_we ? remap_wa : {remap_idx, raw[7:4]}), .data_a(remap_wd), .wren_a(remap_we),
+//     .q_a(map_hi),
+//     .clock_b(clk), .address_b({remap_idx, raw[3:0]}), .q_b(map_lo)
+// );
+assign remap_a_a = {remap_idx, raw[7:4]};
+assign remap_b_a = {remap_idx, raw[3:0]};
+assign map_hi    = remap_a_q;
+assign map_lo    = remap_b_q;
 wire [7:0] rval = remap_en ? {map_hi[3:0], 4'd0} | map_lo : raw;
 logic        half = 1'b0;               // slow mode: every other microsecond
 

@@ -43,6 +43,17 @@ module williams_sndbd
     output logic [15:0] rom_a,          // program ROM in the board's pool (rtl/williams_board.sv)
     input  logic  [7:0] rom_d,          // byte at rom_a, refreshed within 6 clocks of a change
 
+    // CHIPPOOL-2026-10-27: shared chip pool (rtl/williams_board.sv); this board no longer instances them
+    output chip_pool_pkg::m6800_i_t     m6800_i,        // MC6808 (pool m6800_0 / m6800_1)
+    input  chip_pool_pkg::m6800_o_t     m6800_o,
+    output chip_pool_pkg::pia6821p_i_t  pia_i,          // MC6821 (pool pia6821p slot 3 / 2)
+    input  chip_pool_pkg::pia6821p_o_t  pia_o,
+    output chip_pool_pkg::hc55516_i_t   hc_i,           // HC-55516 (pool hc55516_0)
+    input  chip_pool_pkg::hc55516_o_t   hc_o,
+    // RAMPOOL-2026-10-27: board RAM 256 bytes (pool block 7 / 5)
+    output ram_pool_pkg::pram_i_t       pr_i,
+    input  ram_pool_pkg::pram_o_t       pr_o,
+
     output logic signed [15:0] audio
 );
 
@@ -65,12 +76,21 @@ logic  [7:0] cpu_do, cpu_di;
 logic        cpu_wr;
 logic        irq;
 
-jt680x cpu
-(
-    .rst(reset), .clk(clk), .cen(cen), .wr(cpu_wr), .addr(a), .din(cpu_di), .dout(cpu_do),
-    .ext_halt(1'b0), .ba(), .irq(irq), .nmi(1'b0),
-    .irq_icf(1'b0), .irq_ocf(1'b0), .irq_tof(1'b0), .irq_sci(1'b0), .irq_cmf(1'b0), .irq2(1'b0)
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (m6800_0 / m6800_1)
+// jt680x cpu
+// (
+//     .rst(reset), .clk(clk), .cen(cen), .wr(cpu_wr), .addr(a), .din(cpu_di), .dout(cpu_do),
+//     .ext_halt(1'b0), .ba(), .irq(irq), .nmi(1'b0),
+//     .irq_icf(1'b0), .irq_ocf(1'b0), .irq_tof(1'b0), .irq_sci(1'b0), .irq_cmf(1'b0), .irq2(1'b0)
+// );
+assign m6800_i.rst = reset;
+assign m6800_i.cen = cen;
+assign m6800_i.irq = irq;
+assign m6800_i.nmi = 1'b0;
+assign m6800_i.din = cpu_di;
+assign cpu_wr = m6800_o.wr;
+assign a      = m6800_o.a;
+assign cpu_do = m6800_o.dout;
 
 // jt680x holds wr for a whole micro-cycle group: commit one write when it ends (Space Invaders sound pattern)
 logic [15:0] wl_a = 16'd0, cmt_a = 16'd0;
@@ -105,11 +125,19 @@ wire wr_pia = cmt & (gen2 ? cmt_a[15:13] == 3'b001 : cmt_a[14:2] == 13'h0100);
 
 logic [7:0] ram_q;
 
-dpram_dc #(.widthad_a(8)) ram
-(
-    .clock_a(clk), .address_a(wr_ram ? cmt_a[7:0] : a[7:0]), .data_a(cmt_d), .wren_a(wr_ram), .q_a(ram_q),
-    .clock_b(clk)
-);
+// RAMPOOL-2026-10-27: original instance below, now a pool block
+// dpram_dc #(.widthad_a(8)) ram
+// (
+//     .clock_a(clk), .address_a(wr_ram ? cmt_a[7:0] : a[7:0]), .data_a(cmt_d), .wren_a(wr_ram), .q_a(ram_q),
+//     .clock_b(clk)
+// );
+assign pr_i.a_addr = {7'd0, wr_ram ? cmt_a[7:0] : a[7:0]};
+assign pr_i.a_d    = cmt_d;
+assign pr_i.a_we   = wr_ram;
+assign pr_i.b_addr = 15'd0;
+assign pr_i.b_d    = 8'h00;
+assign pr_i.b_we   = 1'b0;
+assign ram_q = pr_o.a_q;
 
 assign rom_a = a;
 
@@ -118,16 +146,39 @@ assign rom_a = a;
 logic [7:0] pia_do, pa_o, pa_oe, pb_o, pb_oe;
 logic       irqa, irqb, ca2_o, cb2_o;
 
-pia6821 pia
-(
-    .clk(clk), .rst(reset),
-    .ce(wr_pia | (cen & ~cpu_wr & rd_pia)),
-    .cs(wr_pia | rd_pia), .rw(~wr_pia), .rs(wr_pia ? cmt_a[1:0] : a[1:0]), .din(cmt_d), .dout(pia_do),
-    .irqa(irqa), .irqb(irqb),
-    .pa_i(gen2 ? bus_i : 8'hFF), .pa_pins(gen2 & bus_pins), .pa_o(pa_o), .pa_oe(pa_oe),
-    .ca1(gen2 ? hs_in : 1'b1), .ca2_i(1'b1), .ca2_o(ca2_o), .ca2_oe(),
-    .pb_i(gen2 ? 8'hFF : cmd), .pb_o(pb_o), .pb_oe(pb_oe), .cb1(gen2 ? cb1_in : cmd != 8'hFF), .cb2_i(1'b1), .cb2_o(cb2_o), .cb2_oe()
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (pia6821 pool)
+// pia6821 pia
+// (
+//     .clk(clk), .rst(reset),
+//     .ce(wr_pia | (cen & ~cpu_wr & rd_pia)),
+//     .cs(wr_pia | rd_pia), .rw(~wr_pia), .rs(wr_pia ? cmt_a[1:0] : a[1:0]), .din(cmt_d), .dout(pia_do),
+//     .irqa(irqa), .irqb(irqb),
+//     .pa_i(gen2 ? bus_i : 8'hFF), .pa_pins(gen2 & bus_pins), .pa_o(pa_o), .pa_oe(pa_oe),
+//     .ca1(gen2 ? hs_in : 1'b1), .ca2_i(1'b1), .ca2_o(ca2_o), .ca2_oe(),
+//     .pb_i(gen2 ? 8'hFF : cmd), .pb_o(pb_o), .pb_oe(pb_oe), .cb1(gen2 ? cb1_in : cmd != 8'hFF), .cb2_i(1'b1), .cb2_o(cb2_o), .cb2_oe()
+// );
+assign pia_i.rst     = reset;
+assign pia_i.ce      = wr_pia | (cen & ~cpu_wr & rd_pia);
+assign pia_i.cs      = wr_pia | rd_pia;
+assign pia_i.rw      = ~wr_pia;
+assign pia_i.rs      = wr_pia ? cmt_a[1:0] : a[1:0];
+assign pia_i.din     = cmt_d;
+assign pia_i.pa_i    = gen2 ? bus_i : 8'hFF;
+assign pia_i.pa_pins = gen2 & bus_pins;
+assign pia_i.ca1     = gen2 ? hs_in : 1'b1;
+assign pia_i.ca2_i   = 1'b1;
+assign pia_i.pb_i    = gen2 ? 8'hFF : cmd;
+assign pia_i.cb1     = gen2 ? cb1_in : cmd != 8'hFF;
+assign pia_i.cb2_i   = 1'b1;
+assign pia_do = pia_o.dout;
+assign irqa   = pia_o.irqa;
+assign irqb   = pia_o.irqb;
+assign pa_o   = pia_o.pa_o;
+assign pa_oe  = pia_o.pa_oe;
+assign ca2_o  = pia_o.ca2_o;
+assign pb_o   = pia_o.pb_o;
+assign pb_oe  = pia_o.pb_oe;
+assign cb2_o  = pia_o.cb2_o;
 
 assign irq = irqa | irqb;
 
@@ -161,11 +212,16 @@ wire signed [15:0] dc_hi = dc[31:16];                              // part-selec
 /////////////////////////////  HC-55516 speech  /////////////////////////////
 
 logic signed [15:0] cvsd;
-hc55516 speech_dec
-(
-    .clk(clk), .rst(reset | ~(speech | ext_cvsd)), .cvsd_clk(ext_cvsd ? ext_clk : cb2_o), .digit(ext_cvsd ? ext_digit : ca2_o),
-    .out(cvsd)
-);
+// CHIPPOOL-2026-10-27: original instance below, now in the dispatcher (hc55516_0)
+// hc55516 speech_dec
+// (
+//     .clk(clk), .rst(reset | ~(speech | ext_cvsd)), .cvsd_clk(ext_cvsd ? ext_clk : cb2_o), .digit(ext_cvsd ? ext_digit : ca2_o),
+//     .out(cvsd)
+// );
+assign hc_i.rst      = reset | ~(speech | ext_cvsd);
+assign hc_i.cvsd_clk = ext_cvsd ? ext_clk : cb2_o;
+assign hc_i.digit    = ext_cvsd ? ext_digit : ca2_o;
+assign cvsd = hc_o.out;
 assign cvsd_out = cvsd;
 
 // 0.8 / 0.25 of the DAC's quarter scale: cvsd * 3 / 4 (the DAC path is already a quarter)

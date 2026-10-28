@@ -45,7 +45,9 @@ wire        ioctl_wr;
 wire  [7:0] ioctl_index;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
-wire [15:0] joystick_0, joystick_1;
+// SVCBTN-2026-10-27: original below (bits 14-16 = the coin-door buttons)
+// wire [15:0] joystick_0, joystick_1;
+wire [31:0] joystick_0, joystick_1;
 wire [15:0] joy_a0;                  // left analog stick, pad 1: Y high byte, X low byte (signed, up / left negative)
 wire [15:0] joy_r0, joy_r1;          // right analog sticks, pads 1 and 2
 wire [15:0] joy_a1;                  // left analog stick, pad 2
@@ -165,7 +167,9 @@ localparam CONF_STR = {
 	"DIP;",
 	"-;",
 	"R0,Reset;",
-	"J1,Btn 1,Btn 2,Btn 3,Btn 4,Coin,Start 1P,Start 2P,Pause,Btn 5,Btn 6;",
+	// SVCBTN-2026-10-27: original below (Advance / Auto Up / HS Reset: mappable, unmapped by default)
+	// "J1,Btn 1,Btn 2,Btn 3,Btn 4,Coin,Start 1P,Start 2P,Pause,Btn 5,Btn 6;",
+	"J1,Btn 1,Btn 2,Btn 3,Btn 4,Coin,Start 1P,Start 2P,Pause,Btn 5,Btn 6,Advance,Auto Up,HS Reset;",
 	"jn,A,B,X,Y,Select,Start,R,L;",
 	"V,v",`BUILD_DATE
 };
@@ -311,7 +315,18 @@ ctl_keyboard #(.NX(4), .NXO(3), .XKEYS({24'h10_3E_02, 24'h20_45_01, 24'h10_06_00
 (
 	.clk(CLK_SYS), .ps2_key(ps2_key), .pause(pause_cpu), .kb(kb), .kbx(kbx)
 );
-wire auto_up = kbx[1], kb_hsreset = kbx[2];       // coin door: Auto Up / Manual Down switch, High Score Reset
+// SVCBTN-2026-10-27: original below
+// wire auto_up = kbx[1], kb_hsreset = kbx[2];       // coin door: Auto Up / Manual Down switch, High Score Reset
+// Coin-door switches on pad buttons (J1 slots 11-13; the MRAs give them no default, so they are unmapped until the
+// user maps them): bit 14 Advance, 15 Auto Up / Manual Down (each press toggles, ignored while paused, as key 0),
+// 16 High Score Reset. Either pad works.
+wire [2:0] door_pad = joystick_0[16:14] | joystick_1[16:14];
+reg        door_up_d = 0, pad_up_tgl = 0;
+always @(posedge CLK_SYS) begin
+	door_up_d <= door_pad[1];
+	if (door_pad[1] & ~door_up_d & ~pause_cpu) pad_up_tgl <= ~pad_up_tgl;
+end
+wire auto_up = kbx[1] ^ pad_up_tgl, kb_hsreset = kbx[2] | door_pad[2];   // coin door: Auto Up / Manual Down, High Score Reset
 wire kb_pause = kb[12];
 
 //////////////////  Arcade Buttons/Interfaces   ///////////////////////////
@@ -396,7 +411,9 @@ ctl_ids u_ids
 (
 	// CTL2-2026-10-25: original below
 // 	.joy0(joystick_0), .joy1(joystick_1), .kb({kb[12:11], kb_service, kb[9:0]}), .dir1(dir1), .dir2(dir2),
-	.joy0(joystick_0), .joy1(joystick_1), .kb({kb[12:11], kbx[0], kb[9:0]}), .dir1(dir1), .dir2(dir2),
+	// SVCBTN-2026-10-27: original below (Advance from a pad button too)
+// 	.joy0(joystick_0), .joy1(joystick_1), .kb({kb[12:11], kbx[0], kb[9:0]}), .dir1(dir1), .dir2(dir2),
+	.joy0(joystick_0[15:0]), .joy1(joystick_1[15:0]), .kb({kb[12:11], kbx[0] | door_pad[0], kb[9:0]}), .dir1(dir1), .dir2(dir2),
 	.coin1(joystick_0[8] | kb[8]), .coin2(joystick_1[8] | kb[9]), .coin3(1'b0), .ctl(ids)
 );
 // UPDCTL-2026-10-25: original first line below (the vector now goes through williams_updctl as ctl_raw)
